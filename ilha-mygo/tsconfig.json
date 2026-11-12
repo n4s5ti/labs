@@ -1,0 +1,11 @@
+{
+  "extends": "../../ilha/tsconfig.base.json",
+  "include": ["src/**/*", "example/**/*"],
+  "exclude": ["dist", "node_modules"],
+  "compilerOptions": {
+    "types": ["@types/bun"],
+    "strictNullChecks": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "ilha"
+  }
+}

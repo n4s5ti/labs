@@ -9,6 +9,7 @@ tests and a runnable example.
 |---|---|---|
 | [ilha-three](./ilha-three) (`ilha-tree`) | Three.js renderer bindings for [ilha](https://github.com/ilhajs/ilha) with react-three-fiber parity | `cd ilha-three && bun install && bun run example` → `http://localhost:8137/` |
 | [ilha-pixi](./ilha-pixi) (`ilha-pixi`) | PixiJS renderer bindings for ilha with pixi-react parity | `cd ilha-pixi && bun install && bun run example` → `http://localhost:8138/` |
+| [ilha-mygo](./ilha-mygo) (`ilha-mygo`) | Go retained-host bindings for ilha (`bun:ffi` primary, child-process IPC fallback) | `cd ilha-mygo && bun install && bun run example` → `http://localhost:8139/` |
 
 Each package also documents its own API in its README.
 

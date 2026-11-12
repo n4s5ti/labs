@@ -8,3 +8,8 @@ dist/
 # Bundled demo pages (`bun run example:build`, rebuilt on serve).
 **/example/index.html
 **/example/debug-bundle.js
+
+# Compiled Go transports (`bun run build:lib`, `bun run build:ipc`).
+*.so
+*.h
+ilha-mygo/bin/
