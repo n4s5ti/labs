@@ -1,0 +1,116 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #e0e0e0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#app canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 220px;
+  padding: 12px 14px;
+  background: rgb(16 18 24 / 0.82);
+  color: #e8e8e8;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.panel h1 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel .hint {
+  margin: 0 0 10px;
+  color: #9aa0aa;
+  font-size: 11px;
+}
+
+.panel .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.panel select {
+  max-width: 120px;
+  background: #24272e;
+  color: #e8e8e8;
+  border: 1px solid #3a3e47;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.panel .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-start;
+}
+
+.panel button {
+  background: #2c313a;
+  color: #e8e8e8;
+  border: 1px solid #3a3e47;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  background: #3a414d;
+}
+
+.panel input[type="range"] {
+  width: 110px;
+  accent-color: #7aa2f7;
+}
+
+.panel .expressions {
+  margin-top: 8px;
+  border-top: 1px solid #3a3e47;
+  padding-top: 6px;
+}
+
+#errors {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 10px 12px;
+  background: #5f1d1d;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+  .panel {
+    width: 168px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .panel input[type="range"] {
+    width: 80px;
+  }
+}

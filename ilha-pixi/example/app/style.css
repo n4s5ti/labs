@@ -1,0 +1,56 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0e0e1a;
+  color: #f5f0ff;
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+.overlay {
+  position: fixed;
+  left: 16px;
+  bottom: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  background: rgb(0 0 0 / 45%);
+  border-radius: 10px;
+  pointer-events: none;
+  max-width: min(480px, 90vw);
+}
+
+.overlay h1 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.overlay p {
+  margin: 0;
+  font-size: 12.5px;
+  opacity: 0.8;
+}
+
+#errors {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  background: #3d0a0a;
+  color: #ffd9d9;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font: 13px/1.4 monospace;
+  white-space: pre-wrap;
+}
+
+#errors[hidden] {
+  display: none;
+}

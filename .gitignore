@@ -1,0 +1,10 @@
+# Dependencies — reinstall with `bun install`.
+node_modules/
+bun-debug.log*
+
+# Library build output (`bun run build`).
+dist/
+
+# Bundled demo pages (`bun run example:build`, rebuilt on serve).
+**/example/index.html
+**/example/debug-bundle.js
