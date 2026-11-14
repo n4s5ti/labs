@@ -7,6 +7,7 @@ tests and a runnable example.
 
 | Experiment | What it is | Run it |
 |---|---|---|
+| [ilha-fate](./ilha-fate) (`ilha-fate`) | ilha bindings for Fate data views (client-state over `@nkzw/fate`, suspense + atom updates) | `cd ilha-fate && bun install && bun run example` → `http://localhost:8140/` |
 | [ilha-pixi](./ilha-pixi) (`ilha-pixi`) | PixiJS renderer bindings for ilha with pixi-react parity (2D + `@pixi/3d` scenes) | `cd ilha-pixi && bun install && bun run example` → `http://localhost:8138/` |
 | [ilha-asuka](./ilha-asuka) (`ilha-asuka`) | ilha renderer over Asuka's native-host protocol (`ops` batches + layout in Go, `bun:ffi` primary, child-process IPC fallback) | `cd ilha-asuka && bun install && bun run example` → `http://localhost:8139/` |
 
