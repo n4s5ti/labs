@@ -1,12 +1,12 @@
 {
   "name": "ilha-pixi",
   "version": "0.1.0",
-  "description": "PixiJS renderer bindings for ilha (@pixi/react parity on ilha PaintOps + atoms)",
+  "description": "PixiJS renderer bindings for ilha (2D + @pixi/3d scenes, @pixi/react parity on ilha PaintOps + atoms)",
   "keywords": [
     "effect",
     "ilha",
     "pixi.js",
-    "2d",
+    "3d",
     "renderer",
     "jsx"
   ],
@@ -63,10 +63,11 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^21.0.4",
+    "@pixi/3d": "0.1.0",
     "@types/bun": "^1.4.4",
     "@typescript/typescript-linux-x64": "^7.0.2",
     "effect": "^4.1.0",
-    "ilha": "file:../ilha/packages/ilha",
+    "ilha": "file:../../ilha/packages/ilha",
     "pixi.js": "8.23.0",
     "rimraf": "^6.1.3",
     "tsdown": "^0.23.3",
@@ -75,6 +76,7 @@
   "peerDependencies": {
     "effect": "^4.1.0",
     "ilha": ">=0.16.3",
-    "pixi.js": ">=8.2.6"
+    "pixi.js": ">=8.23.0",
+    "@pixi/3d": ">=0.1.0"
   }
 }

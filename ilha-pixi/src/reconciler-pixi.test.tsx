@@ -14,9 +14,11 @@ import {
   bindPixiEvents,
   createPixiElement,
   createPixiRenderer,
+  resolveTarget,
   setPixiProp,
   syncEventMode,
 } from "./reconciler-pixi.ts";
+import { extend } from "./catalogue.ts";
 
 describe("reconciler-pixi", () => {
   test("mounts containers with sprite and graphics children", async () => {
@@ -117,7 +119,10 @@ describe("reconciler-pixi", () => {
     expect(el.eventMode).toBe("static");
   });
 
-  test("args rebuild transplants children and props", () => {
+  test("args rebuild adopts in place, keeping identity and children", () => {
+    // Identity stability is the contract: swapping nodes would strand
+    // user refs and handlers on the discarded instance, and breaks 3D
+    // slot routing (initial-mount `args` dropped the instance entirely).
     const parent = createPixiElement("container");
     const el = createPixiElement("container");
     const child = createPixiElement("sprite");
@@ -125,10 +130,32 @@ describe("reconciler-pixi", () => {
     parent.addChild(el);
     setPixiProp(el, "alpha", 0.3);
     setPixiProp(el, "args", []);
-    const fresh = parent.children[0] as Container;
+    expect(parent.children[0]).toBe(el);
+    expect(el.alpha).toBe(0.3);
+    expect(child.parent).toBe(el);
+    expect(el.appliedArgs).toEqual([]);
+  });
+
+  test("args rebuild swaps holders for non-tree values", () => {
+    class FakeResource {
+      tag: string;
+      constructor(opts?: { tag?: string }) {
+        if (opts === undefined) {
+          throw new Error("needs opts");
+        }
+        this.tag = opts.tag ?? "?";
+      }
+    }
+    extend({ FakeResource: FakeResource as never });
+    const parent = createPixiElement("container");
+    const el = createPixiElement("fakeResource");
+    parent.addChild(el);
+    setPixiProp(el, "args", [{ tag: "real" }]);
+    const fresh = parent.children[0];
     expect(fresh).not.toBe(el);
-    expect(fresh.alpha).toBe(0.3);
-    expect(child.parent).toBe(fresh);
+    expect(
+      (resolveTarget(fresh as never) as unknown as { tag?: string }).tag,
+    ).toBe("real");
   });
 
   test("handler-bearing descendants stay hittable under handler-less ancestors", () => {

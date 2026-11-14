@@ -6,19 +6,21 @@
       "name": "@ilha/pixi",
       "devDependencies": {
         "@happy-dom/global-registrator": "^21.0.4",
+        "@pixi/3d": "0.1.0",
         "@types/bun": "^1.4.4",
         "@typescript/typescript-linux-x64": "^7.0.2",
         "effect": "^4.1.0",
-        "ilha": "file:../ilha/packages/ilha",
+        "ilha": "file:../../ilha/packages/ilha",
         "pixi.js": "8.23.0",
         "rimraf": "^6.1.3",
         "tsdown": "^0.23.3",
         "typescript": "^7",
       },
       "peerDependencies": {
+        "@pixi/3d": ">=0.1.0",
         "effect": "^4.1.0",
         "ilha": ">=0.16.3",
-        "pixi.js": ">=8.2.6",
+        "pixi.js": ">=8.23.0",
       },
     },
   },
@@ -36,6 +38,8 @@
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || 2.0.0-beta.2", "@emnapi/runtime": "^1.7.1 || 2.0.0-beta.2" } }, "sha512-mRyDmEw9/fCDXCGfL1sbgIw/GUK0PVxRW4YwgPN61F3LQ+fSyoBFarJVzgGyhF6kRzEQZ0FejDqm4WLXSeqQmw=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.158.0", "", {}, "sha512-xZ66qA4WmLbTLlxH3mqMd8f9UKbaOzOT0ATwFf4DH/14pMgpUrtqtjyYzOQmgfl2a0iRAAMbQ9G1th/67jRzGw=="],
+
+    "@pixi/3d": ["@pixi/3d@0.1.0", "", { "dependencies": { "meshoptimizer": "^1.2.0" }, "peerDependencies": { "pixi.js": "^8.23.0" } }, "sha512-6mwC1nD4pDRix9QVl8aRDSHeMZtqb00vKiKb6U5cFeaYxZbwEnn9gXJphnk9udQKqf0jz2z8YUXaGudsACLaOQ=="],
 
     "@quansync/fs": ["@quansync/fs@1.1.0", "", { "dependencies": { "quansync": "^1.0.0" } }, "sha512-qAPG/t3HqML1TlN7sY/pTbEjzFVAKsMjNNMGheyDosro+kT4iw2KCUoHcVdmliwWjorm4elZbgNQyU2eD97eDg=="],
 
@@ -179,7 +183,7 @@
 
     "hookable": ["hookable@6.1.2", "", {}, "sha512-+abwxtiEA52GCVIsQqut3S/uKTbUwYIp4Pe/vv+6py5XiXBCqMZHg6pA6Y5qhgLSEys0/cYuPbO0z1QFj5ZCmg=="],
 
-    "ilha": ["ilha@file:../ilha/packages/ilha", { "devDependencies": { "effect": "^4.1.0" }, "peerDependencies": { "effect": "^4.1.0" } }],
+    "ilha": ["ilha@file:../../ilha/packages/ilha", { "devDependencies": { "effect": "^4.1.0" }, "peerDependencies": { "effect": "^4.1.0" } }],
 
     "import-without-cache": ["import-without-cache@0.4.1", "", {}, "sha512-vXoV9PjKHEednCUu01e98TkImxy67e3BJXbTIOmIq4Hyzw3IAwYRcuPkfeTzJzwyyts4kjuA73x+pWJLc4f86A=="],
 
@@ -188,6 +192,8 @@
     "js-binary-schema-parser": ["js-binary-schema-parser@2.0.3", "", {}, "sha512-xezGJmOb4lk/M1ZZLTR/jaBHQ4gG/lqQnJqdIv4721DMggsa1bDVlHXNeHYogaIEHD9vCRv0fcL4hMA+Coarkg=="],
 
     "lru-cache": ["lru-cache@11.5.3", "", {}, "sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg=="],
+
+    "meshoptimizer": ["meshoptimizer@1.3.0", "", {}, "sha512-2oZqMAcEEiCtXWUjIGtZ71oPx1B0ZxYGTqIKsXB1wzWFhleNsCFxQuUJzgCV706bRcwPWtMGf1odmQvAcqKkIw=="],
 
     "minimatch": ["minimatch@11.0.8", "", { "dependencies": { "@isaacs/nonrecursive-glob-match": "^1.1.0", "brace-expansion": "^5.0.12" } }, "sha512-nFQuYSTVrGvysVBps5Ih+0BdnYFN/Cj3C816r6+p7yK+FHrVLGE4O4N9AFwykrlNlvM2HYt+Rad1Uiro6h88Ig=="],
 

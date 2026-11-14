@@ -8,7 +8,7 @@ import { Scene } from "./scene.tsx";
  * Port of the pixi.js v8 slots example, built only on `ilha-pixi`
  * bindings: `<Canvas>` owns the application/ticker/resize, the machine
  * is JSX, symbols suspend through `useLoader`, and SPIN is a pointerdown
- * handler away.
+ * handler away — with a `@pixi/3d` spinning-cube backdrop behind it.
  */
 const App = (): View => (
   <>
@@ -17,7 +17,7 @@ const App = (): View => (
     </Canvas>
     <header class="overlay">
       <h1>Pixi Monster Slots — ilha-pixi</h1>
-      <p>Click SPIN (or the button) to play. Reels ease out with backout.</p>
+      <p>Click SPIN (or the button) to play. Reels ease out with backout. Tap the cube to spin it faster.</p>
     </header>
   </>
 );

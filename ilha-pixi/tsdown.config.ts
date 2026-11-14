@@ -9,7 +9,7 @@ export default defineConfig({
     "src/events.ts",
     "src/catalogue.ts",
   ],
-  external: ["effect", /^effect\//u, "ilha", /^ilha\//u, "pixi.js"],
+  external: ["effect", /^effect\//u, "ilha", /^ilha\//u, "pixi.js", "@pixi/3d"],
   minify: false,
   platform: "neutral",
 });

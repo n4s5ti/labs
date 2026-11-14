@@ -7,6 +7,7 @@ import type {
   Sprite,
   Ticker,
 } from "pixi.js";
+import type { Mesh3D, View3D } from "@pixi/3d";
 
 import { ErrorBoundary } from "ilha";
 import type { View } from "ilha";
@@ -284,9 +285,48 @@ export function* Slots(): Generator<
   );
 };
 
-/** Scene content: the slots behind an error boundary. */
+/** A slow cube behind the machine, tap it to spin it faster. */
+const orbit: { mesh: Mesh3D | null; speed: number } = {
+  mesh: null,
+  speed: 0.4,
+};
+
+const frameCube = (target: unknown): void => {
+  const view = target as View3D;
+  view.camera.position.set(0, 0.5, 6);
+};
+
+/** 3D backdrop: one view, one light, one spinning cube, all declarative. */
+export function OrbitBackdrop(): View {
+  useTick((ticker) => {
+    if (orbit.mesh !== null) {
+      orbit.mesh.rotation.y += (ticker.deltaMS / 1000) * orbit.speed;
+    }
+  });
+  return (
+    <view3D autoResize onUpdate={frameCube}>
+      <directionalLight position={[3, 5, 2]} intensity={3} />
+      <mesh3D
+        ref={(target: unknown) => {
+          orbit.mesh = target as Mesh3D;
+        }}
+        position={[0, 0.5, 0]}
+        rotation={[0.4, 0, 0]}
+        onPointerTap={() => {
+          orbit.speed = orbit.speed > 1 ? 0.4 : 2.5;
+        }}
+      >
+        <cubeGeometry attach="geometry" />
+        <material3D attach="material" />
+      </mesh3D>
+    </view3D>
+  );
+}
+
+/** Scene content: the 3D backdrop and the slots behind an error boundary. */
 export const Scene = (): View => (
   <ErrorBoundary fallback={() => <container />}>
+    <OrbitBackdrop />
     <Slots />
   </ErrorBoundary>
 );

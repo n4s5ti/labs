@@ -12,4 +12,4 @@ dist/
 # Compiled Go transports (`bun run build:lib`, `bun run build:ipc`).
 *.so
 *.h
-ilha-mygo/bin/
+ilha-asuka/bin/

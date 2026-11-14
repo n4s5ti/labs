@@ -1,4 +1,5 @@
 import { Color, Container, Filter, Graphics } from "pixi.js";
+import { Container3D } from "@pixi/3d";
 
 import { createRenderer } from "ilha/renderer";
 import type {
@@ -33,9 +34,9 @@ export interface PixiHostObject extends Container {
   /** Real value when the tag resolves to a non-Container constructor. */
   pixiObject?: Container | Filter | unknown;
   /** Attach target on the parent (`attach` prop or auto-inferred). */
-  attachSpec?: string | ((parent: Container, child: unknown) => void);
+  attachSpec?: string | ((parent: Container | Container3D, child: unknown) => void);
   /** Where this node is attached (set by `applyAttach`, cleared on release). */
-  attachedTo?: { host: Container; key: string };
+  attachedTo?: { host: Container | Container3D; key: string };
   /** Constructor args currently built with (for `args` diffing). */
   appliedArgs?: readonly unknown[];
   /** Data props applied since construction (replayed after `args` rebuild). */
@@ -44,6 +45,12 @@ export interface PixiHostObject extends Container {
   updateFn?: (object: Container) => void;
   /** Attachments made onto this host: key -> { node, owner }. */
   attached: Map<string, { node: PixiHostObject; owner: PixiHostObject }>;
+  /**
+   * Children this host placed outside itself (3D scene nodes living
+   * under a view's scene root, including migrated hole contents), so
+   * cleanup and disposal find them without sweeping other hosts' nodes.
+   */
+  owned: Set<PixiHostObject>;
   /** Event prop names currently assigned (for stale-handler cleanup). */
   appliedEvents: Set<string>;
   setAttribute: (name: string, value: string) => void;
@@ -63,6 +70,86 @@ const FILTERS_FLAG = "__pixireact_filters";
 export const resolveTarget = (node: PixiHostObject): Container =>
   (node.pixiObject as Container | undefined) ?? node;
 
+/** True for adopted 3D scene nodes (the Container3D subtree). */
+export const isSceneNode = (value: unknown): value is Container3D =>
+  value instanceof Container3D;
+
+/** The scene a View3D draws, if `host` is one. */
+const sceneOf = (host: Container | Container3D): Container3D | undefined => {
+  const root = (host as unknown as { root?: unknown }).root;
+  return root instanceof Container3D ? root : undefined;
+};
+
+/**
+ * Place a plain (non-`attach`) child: 3D scene nodes mount under the
+ * view's scene root, everything else on the logical host itself.
+ *
+ * A view draws only its scene (`View3D.addChild` always throws), so a
+ * non-3D child under one is a user error with a pointer to the fix —
+ * except holes, which ride the scene inertly (the scene accepts plain
+ * containers without drawing them) after their 3D children migrate
+ * ahead of them. Either way the logical host tracks scene-routed nodes
+ * in `owned`, so later cleanups find exactly their own nodes.
+ */
+const placePlainChild = (host: PixiHostObject, node: PixiHostObject): void => {
+  const anchor = attachHost(host);
+  const scene = sceneOf(anchor);
+  if (scene === undefined) {
+    // Only hosts without a scene of their own pull routed children
+    // back: a view's scene moves with it, so its routed nodes stay put.
+    if (sceneOf(node) === undefined) {
+      pullBack(node);
+    }
+    host.addChild(node);
+    return;
+  }
+  const target = resolveTarget(node);
+  if (target instanceof Container3D) {
+    scene.addChild(node as never);
+    host.owned.add(node);
+    // Moving between scenes carries already-routed children along, so a
+    // hole reparented view-to-view keeps its whole branch together.
+    for (const child of [...node.owned]) {
+      const at = (child as unknown as Container).parent;
+      if (at instanceof Container3D && at !== scene) {
+        scene.addChild(child as never);
+      }
+    }
+    return;
+  }
+  if (isHole(node)) {
+    for (const child of [...node.children] as PixiHostObject[]) {
+      if (resolveTarget(child) instanceof Container3D) {
+        scene.addChild(child as never);
+        node.owned.add(child);
+      }
+    }
+    scene.addChild(node as never);
+    host.owned.add(node);
+    return;
+  }
+  throw new Error(
+    `<${node.tagName}> cannot mount under <${host.tagName}>: a view draws only its scene (view.root). Put 2D overlays as siblings after the view instead.`,
+  );
+};
+
+/**
+ * Pull scene-routed children back into their host when it leaves the
+ * scene (e.g. a hole reparented under a 2D container) — keeps one owner
+ * per node instead of leaking scene orphans.
+ */
+const pullBack = (node: PixiHostObject): void => {
+  if (node.owned === undefined || node.owned.size === 0) {
+    return;
+  }
+  for (const child of [...node.owned]) {
+    if ((child as unknown as Container).parent instanceof Container3D) {
+      node.addChild(child);
+      node.owned.delete(child);
+    }
+  }
+};
+
 export const isTextPlaceholder = (node: PixiHostObject): boolean =>
   node.userData[TEXT_FLAG] === true;
 
@@ -75,6 +162,7 @@ const augment = (object: Container, tag: string): PixiHostObject => {
   el.appliedProps = [];
   el.appliedEvents = new Set();
   el.attached = new Map();
+  el.owned = new Set();
   if (tag === "span") {
     // Ilha hole host (components, fragments, keyed rows): transparent for
     // `attach`, which climbs to the nearest real ancestor.
@@ -93,7 +181,7 @@ const augment = (object: Container, tag: string): PixiHostObject => {
       }
       const spec = node.attachSpec ?? inferAttach(node);
       if (spec === undefined) {
-        el.addChild(node);
+        placePlainChild(el, node);
         continue;
       }
       applyAttach(el, node, spec);
@@ -108,7 +196,7 @@ const augment = (object: Container, tag: string): PixiHostObject => {
 /** R3F-style convention for pixi: `Filter` children auto-attach to `filters`. */
 const inferAttach = (
   node: PixiHostObject,
-): string | ((parent: Container, child: unknown) => void) | undefined => {
+): string | ((parent: Container | Container3D, child: unknown) => void) | undefined => {
   if (resolveTarget(node) instanceof Filter) {
     return "filters";
   }
@@ -116,7 +204,7 @@ const inferAttach = (
 };
 
 const setPath = (
-  parent: Container,
+  parent: Container | Container3D,
   parts: readonly string[],
   value: unknown,
 ): void => {
@@ -152,37 +240,43 @@ const writeFilters = (parent: Container, filters: Filter[]): void => {
   ).filters = filters.length > 0 ? [...filters] : null;
 };
 
-const detachFilters = (parent: Container, node: PixiHostObject): void => {
+const detachFilters = (parent: Container | Container3D, node: PixiHostObject): void => {
   const target = resolveTarget(node);
   if (!(target instanceof Filter)) {
     return;
   }
-  const next = readFilters(parent).filter((entry) => entry !== target);
-  writeFilters(parent, next);
-  disposeObject(target);
+  const carrier = parent as Container;
+  const next = readFilters(carrier).filter((entry) => entry !== target);
+  writeFilters(carrier, next);
+  disposeObject(target as never);
 };
 
-const detachPath = (parent: Container, key: string): void => {
+const detachPath = (parent: Container | Container3D, key: string): void => {
+  const carrier = parent as Container;
   if (key === "filters") {
-    writeFilters(parent, []);
+    writeFilters(carrier, []);
     return;
   }
   const parts = key.split("-");
-  const value = getPath(parent, parts);
+  const value = getPath(carrier, parts);
   if (value instanceof Container) {
     disposeObject(value);
   }
   setPath(parent, parts, undefined);
 };
 
+/** True for ilha's transparent hole hosts (components, fragments, keys). */
+const isHole = (node: PixiHostObject): boolean =>
+  node.userData["ilhaHole"] === true;
+
 /** Climb past transparent hole hosts to the nearest real ancestor. */
-const attachHost = (immediate: Container): Container => {
-  let current = immediate;
+const attachHost = (immediate: Container): Container | Container3D => {
+  let current: Container | Container3D = immediate;
   while (
     (current as PixiHostObject).userData?.["ilhaHole"] === true &&
     current.parent !== null
   ) {
-    current = current.parent;
+    current = current.parent as Container | Container3D;
   }
   return current;
 };
@@ -192,7 +286,7 @@ const attachHost = (immediate: Container): Container => {
  * at `node` (repaints replace entries wholesale; stale releases no-op).
  */
 export const releaseAttached = (
-  host: Container,
+  host: Container | Container3D,
   key: string,
   node: PixiHostObject,
 ): void => {
@@ -213,11 +307,11 @@ export const releaseAttached = (
 };
 
 /** Release every attachment owned by a removed subtree. */
-const releaseSubtreeAttachments = (root: Container): void => {
-  const queue: Container[] = [root];
+const releaseSubtreeAttachments = (root: Container | Container3D): void => {
+  const queue: (Container | Container3D)[] = [root];
   while (queue.length > 0) {
-    const current = queue.pop() as Container;
-    queue.push(...current.children);
+    const current = queue.pop() as Container | Container3D;
+    queue.push(...(current.children as (Container | Container3D)[]));
     const tagged = current as unknown as Partial<PixiHostObject>;
     if (tagged.attachedTo !== undefined) {
       const { host, key } = tagged.attachedTo;
@@ -227,28 +321,29 @@ const releaseSubtreeAttachments = (root: Container): void => {
 };
 
 const applyAttach = (
-  immediate: Container,
+  immediate: Container | Container3D,
   node: PixiHostObject,
-  spec: string | ((parent: Container, child: unknown) => void),
+  spec: string | ((parent: Container | Container3D, child: unknown) => void),
 ): void => {
   const target = (node.pixiObject ?? node) as unknown;
-  const parent = attachHost(immediate);
+  const parent = attachHost(immediate as Container);
   if (typeof spec === "function") {
     spec(parent, target);
     return;
   }
   const host = parent as unknown as PixiHostObject;
+  host.attached ??= new Map();
   const previous = host.attached.get(spec);
   if (previous !== undefined && previous.node !== node) {
     releaseAttached(parent, spec, previous.node);
   }
   host.attached.set(spec, { node, owner: immediate as PixiHostObject });
-  node.attachedTo = { host: parent, key: spec };
+  node.attachedTo = { host: parent as Container, key: spec };
   if (spec === "filters") {
     if (target instanceof Filter) {
-      const next = readFilters(parent).filter((entry) => entry !== target);
+      const next = readFilters(parent as Container).filter((entry) => entry !== target);
       next.push(target);
-      writeFilters(parent, next);
+      writeFilters(parent as Container, next);
     }
     return;
   }
@@ -315,14 +410,20 @@ const applyDashProp = (
       const point = current as unknown as {
         x: number;
         y: number;
-        set: (x?: number, y?: number) => void;
+        z?: number;
+        set: (x?: number, y?: number, z?: number) => void;
       };
+      // Extra args are ignored by 2D points, so one path serves both.
       if (parts[1] === "x") {
-        point.set(value, point.y);
+        point.set(value, point.y, point.z);
         return;
       }
       if (parts[1] === "y") {
-        point.set(point.x, value);
+        point.set(point.x, value, point.z);
+        return;
+      }
+      if (parts[1] === "z" && point.z !== undefined) {
+        point.set(point.x, point.y, value);
         return;
       }
     }
@@ -337,12 +438,13 @@ const applyPointProp = (
 ): void => {
   const target = resolveTarget(el) as unknown as Record<string, unknown>;
   const current = target[key] as
-    | { set: (...args: number[]) => void }
+    | { set: (...args: number[]) => void; z?: number }
     | undefined;
-  if (typeof value === "number") {
-    if (key === "scale" && current) {
-      current.set(value, value);
-    } else if (current) {
+  if (typeof value === "number" && current) {
+    // 3D vectors take the scalar on every axis; 2D points ignore the rest.
+    if ("z" in current) {
+      current.set(value, value, value);
+    } else {
       current.set(value, value);
     }
     return;
@@ -448,24 +550,102 @@ const reconstructWithArgs = (
   }
   const tag = el.userData[TAG_FLAG] as string;
   const Ctor = resolveConstructor(tag) ?? Container;
+  let raw: unknown;
   try {
-    const fresh = new (Ctor as new (...args: unknown[]) => Container)(
+    raw = new (Ctor as new (...args: unknown[]) => unknown)(
       ...(args as unknown[]),
     );
-    if (fresh instanceof Container) {
-      transplant(el, augment(fresh, el.tagName), args);
-    } else {
-      const holder = augment(new Container(), el.tagName);
-      holder.pixiObject = fresh;
-      transplant(el, holder, args);
-    }
   } catch {
     // Constructors with required args stay as-is until valid args arrive.
     el.appliedArgs = args;
+    return;
+  }
+  if (raw instanceof Container || raw instanceof Container3D) {
+    // Adopt in place whether or not `el` is parented: the fiber already
+    // holds `el`, so swapping nodes would strand refs and handlers on
+    // the discarded instance (and drops the instance entirely when
+    // unparented, as initial-mount `args` used to do).
+    adoptInstanceInPlace(el, raw, args);
+    return;
+  }
+  if (el.parent === null && el.pixiObject === undefined) {
+    // Initial mount of a non-tree value (texture, material, …): `el`
+    // already is a holder, so the value rides it directly — there is
+    // no parent slot to transplant into.
+    el.pixiObject = raw;
+    el.appliedArgs = args;
+    for (const [key, value] of el.appliedProps.filter(([k]) => k !== "args")) {
+      setPixiProp(el, key, value);
+    }
+    syncEventMode(el);
+    return;
+  }
+  const holder = augment(new Container(), el.tagName);
+  holder.pixiObject = raw;
+  transplant(el, holder, args);
+};
+
+/** Host bookkeeping that an in-place adoption must not overwrite. */
+const ADOPTED_KEEP = new Set([
+  "ilhaPixi",
+  "userData",
+  "tagName",
+  "isConnected",
+  "appliedProps",
+  "appliedEvents",
+  "attached",
+  "attachSpec",
+  "attachedTo",
+  "appliedArgs",
+  "pixiObject",
+  "updateFn",
+  "setAttribute",
+  "removeAttribute",
+  "append",
+]);
+
+/**
+ * Adopt a freshly constructed instance into `el` in place: unseen
+ * instance state moves onto the held node and its prototype becomes the
+ * constructor's, then recorded props replay onto the adopted instance.
+ * Pixi's own per-instance fields win by staying put — only state the
+ * holder lacks is copied over, so children and handlers survive.
+ */
+const adoptInstanceInPlace = (
+  el: PixiHostObject,
+  raw: Container | Container3D,
+  args: readonly unknown[],
+): void => {
+  for (const key of Reflect.ownKeys(raw)) {
+    if (typeof key === "string" && ADOPTED_KEEP.has(key)) {
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(el, key)) {
+      continue;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(raw, key);
+    if (descriptor !== undefined) {
+      Object.defineProperty(el, key, descriptor);
+    }
+  }
+  Object.setPrototypeOf(el, Object.getPrototypeOf(raw));
+  el.appliedArgs = args;
+  for (const [key, value] of el.appliedProps.filter(([k]) => k !== "args")) {
+    setPixiProp(el, key, value);
+  }
+  syncEventMode(el);
+  if (typeof el.updateFn === "function") {
+    el.updateFn(resolveTarget(el));
   }
 };
 
-/** Move children, parent slot, handlers and recorded props onto `fresh`. */
+/**
+ * Move a non-tree value's holder onto `fresh`: children, handlers and
+ * recorded props transfer, then `fresh` takes `el`'s parent slot. Only
+ * holders need this — real tree nodes (2D or 3D) adopt in place and keep
+ * their identity, so refs, handlers and attachments survive `args`
+ * rebuilds.
+ */
 const transplant = (
   el: PixiHostObject,
   fresh: PixiHostObject,
@@ -475,6 +655,7 @@ const transplant = (
   fresh.attachSpec = el.attachSpec;
   fresh.updateFn = el.updateFn;
   fresh.appliedArgs = args;
+  fresh.owned = el.owned;
   const replay = el.appliedProps.filter(([k]) => k !== "args");
   el.appliedProps = [];
   for (const spec of [...el.appliedEvents]) {
@@ -501,10 +682,10 @@ const transplant = (
   const parent = el.parent;
   if (parent !== null) {
     const hostParent = parent as unknown as PixiHostObject;
-    const attachedKey = [...hostParent.attached.entries()].find(
+    const attachedKey = [...(hostParent.attached?.entries() ?? [])].find(
       ([, entry]) => entry.node === el,
     )?.[0];
-    const index = parent.children.indexOf(el);
+    const index = parent.children.indexOf(el as never);
     el.removeFromParent();
     if (attachedKey !== undefined) {
       applyAttach(parent, fresh, fresh.attachSpec ?? attachedKey);
@@ -613,6 +794,18 @@ export const setPixiProp = (
     recordProp(el, key, value);
     return true;
   }
+  if (key === "rotation" && Array.isArray(value)) {
+    // 3D Euler rotation takes radians (`rotation={[x, y, z]}`); a bare
+    // number keeps its 2D meaning and falls through to assignment below.
+    const current = (resolveTarget(el) as unknown as Record<string, unknown>)[
+      key
+    ] as { set: (...args: number[]) => void } | undefined;
+    if (current !== undefined && hasSetMethod(current)) {
+      current.set(...(value as number[]));
+      recordProp(el, key, value);
+      return true;
+    }
+  }
   if (
     key === "position" ||
     key === "scale" ||
@@ -675,9 +868,11 @@ export const createPixiElement = (tag: string): PixiHostObject => {
     );
   }
   try {
-    const instance = new (Ctor as new () => Container)();
-    if (instance instanceof Container) {
-      const el = augment(instance, tag);
+    const instance: unknown = new (Ctor as new () => Container)();
+    if (instance instanceof Container || instance instanceof Container3D) {
+      // Scene nodes adopt in place — a 2D holder could never join the
+      // 3D tree, and the renderer needs the real node for its children.
+      const el = augment(instance as unknown as Container, tag);
       el.userData[TAG_FLAG] = tag;
       syncEventMode(el);
       return el;
@@ -729,20 +924,34 @@ const reconcileChildren = (
       releaseAttached(host, key, entry.node);
     }
   }
-  for (const child of [...host.children]) {
-    if (!seen.has(child as PixiHostObject)) {
-      host.removeChild(child);
-      const tagged = child as PixiHostObject;
-      releaseSubtreeAttachments(child);
-      if (tagged.userData?.[TEXT_FLAG] !== true) {
-        if (tagged.userData?.["ilhaDispose"] !== false) {
-          disposeObject(child);
+  // Scene-routed children live under the view's scene root, not the
+  // logical host — sweep them through the host's `owned` set so one
+  // host never releases another's nodes.
+  const scene = sceneOf(attachHost(host));
+  const previous: PixiHostObject[] = [...host.children] as PixiHostObject[];
+  if (scene !== undefined) {
+    for (const child of scene.children) {
+      const tagged = child as unknown as PixiHostObject;
+      if (host.owned.has(tagged) && !previous.includes(tagged)) {
+        previous.push(tagged);
+      }
+    }
+  }
+  for (const child of previous) {
+    if (!seen.has(child)) {
+      const from = ((child as unknown as Container).parent ?? host) as Container;
+      from.removeChild(child as never);
+      host.owned.delete(child);
+      releaseSubtreeAttachments(child as unknown as Container);
+      if (child.userData?.[TEXT_FLAG] !== true) {
+        if (child.userData?.["ilhaDispose"] !== false) {
+          disposeObject(child as never);
         }
       }
     }
   }
   for (const node of ordered) {
-    host.addChild(node);
+    placePlainChild(host, node);
   }
   if (typeof host.updateFn === "function") {
     host.updateFn(resolveTarget(host));

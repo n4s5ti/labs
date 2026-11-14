@@ -92,8 +92,7 @@ declare module "ilha/jsx-runtime" {
       sprite: PixiElementProps;
       graphics: PixiElementProps;
       // No `text`: it collides with SVG's <text>. Use <pixiText>, which
-      // resolves to the same `Text` constructor (like three's `line`
-      // precedent in ilha-tree).
+      // resolves to the same `Text` constructor.
       pixiText: PixiElementProps;
       htmlText: PixiElementProps;
       bitmapText: PixiElementProps;
@@ -104,6 +103,21 @@ declare module "ilha/jsx-runtime" {
       meshRope: PixiElementProps;
       nineSliceSprite: PixiElementProps;
       particleContainer: PixiElementProps;
+      view3D: PixiElementProps;
+      container3D: PixiElementProps;
+      model3D: PixiElementProps;
+      mesh3D: PixiElementProps;
+      sprite3D: PixiElementProps;
+      camera3D: PixiElementProps;
+      directionalLight: PixiElementProps;
+      ambientLight: PixiElementProps;
+      pointLight: PixiElementProps;
+      spotLight: PixiElementProps;
+      cubeGeometry: PixiElementProps;
+      sphereGeometry: PixiElementProps;
+      cylinderGeometry: PixiElementProps;
+      planeGeometry: PixiElementProps;
+      material3D: PixiElementProps;
       blurFilter: PixiElementProps;
       colorMatrixFilter: PixiElementProps;
       displacementFilter: PixiElementProps;

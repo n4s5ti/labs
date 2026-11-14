@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import * as PIXI3D from "@pixi/3d";
 
 /** A constructor for a pixi.js value (containers, sprites, filters…). */
 export type PixiConstructor<T = unknown> = new (...args: never[]) => T;
@@ -46,18 +47,26 @@ export const resolveConstructor = (tag: string): PixiConstructor | undefined =>
   catalogue.get(parseComponentType(tag));
 
 /**
- * Seed the catalogue with every exported pixi.js constructor.
- * Called once at module load so `<container>`, `<sprite>`, `<graphics>`
- * etc. resolve without an explicit `extend()` call; user classes still
- * use `extend()`.
+ * Seed the catalogue with every exported pixi.js constructor, then every
+ * `@pixi/3d` one, so `<container>`, `<view3D>`, `<mesh3D>`,
+ * `<directionalLight>` etc. resolve without an explicit `extend()` call;
+ * user classes still use `extend()`. First registration wins: on the one
+ * collision (`PlaneGeometry`) the 2D constructor keeps the tag and the 3D
+ * one is reachable through `extend()` under another name.
  */
 const seed = (): void => {
   if (catalogue.size > 0) {
     return;
   }
-  for (const [name, value] of Object.entries(PIXI)) {
-    if (typeof value === "function" && /^[A-Z]/u.test(name)) {
-      catalogue.set(name, value as PixiConstructor);
+  for (const barrel of [PIXI, PIXI3D]) {
+    for (const [name, value] of Object.entries(barrel)) {
+      if (
+        typeof value === "function" &&
+        /^[A-Z]/u.test(name) &&
+        !catalogue.has(name)
+      ) {
+        catalogue.set(name, value as PixiConstructor);
+      }
     }
   }
 };
