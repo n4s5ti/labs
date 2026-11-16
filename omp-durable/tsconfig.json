@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "strictNullChecks": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "sourceMap": true,
+    "types": ["@types/bun"],
+    "lib": ["ES2022"]
+  },
+  "include": ["src/**/*", "example/**/*", "test/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

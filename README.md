@@ -10,6 +10,7 @@ tests and a runnable example.
 | [ilha-fate](./ilha-fate) (`ilha-fate`) | ilha bindings for Fate data views (client-state over `@nkzw/fate`, suspense + atom updates) | `cd ilha-fate && bun install && bun run example` → `http://localhost:8140/` |
 | [ilha-pixi](./ilha-pixi) (`ilha-pixi`) | PixiJS renderer bindings for ilha with pixi-react parity (2D + `@pixi/3d` scenes) | `cd ilha-pixi && bun install && bun run example` → `http://localhost:8138/` |
 | [ilha-asuka](./ilha-asuka) (`ilha-asuka`) | ilha renderer over Asuka's native-host protocol (`ops` batches + layout in Go, `bun:ffi` primary, child-process IPC fallback) | `cd ilha-asuka && bun install && bun run example` → `http://localhost:8139/` |
+| [omp-durable](./omp-durable) (`omp-durable`) | oh-my-pi harness features on pi-durable: full session parity, durable execution, Cloudflare DO ready | `cd omp-durable && bun install && bun run example` → `http://localhost:8150/` |
 
 Each package also documents its own API in its README.
 
