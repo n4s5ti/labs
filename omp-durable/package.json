@@ -26,6 +26,10 @@
     "./storage/do": {
       "types": "./dist/storage/do.d.ts",
       "import": "./dist/storage/do.js"
+    },
+    "./storage/local": {
+      "types": "./dist/storage/local.d.ts",
+      "import": "./dist/storage/local.js"
     }
   },
   "publishConfig": {
@@ -33,10 +37,11 @@
   },
   "scripts": {
     "build": "tsdown",
-    "cleanup": "rimraf dist node_modules",
+    "build:worker": "bun worker/build.ts",
+    "cleanup": "rimraf dist node_modules worker/dist",
     "example": "bun example/serve.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json"
   },
   "dependencies": {
     "@earendil-works/chord": "1.5.2",
@@ -46,7 +51,10 @@
     "@oh-my-pi/pi-agent-core": "18.20.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261116.1",
     "@types/bun": "^1.4.4",
+    "esbuild": "^0.25.0",
+    "miniflare": "^4.20251011.0",
     "rimraf": "^6.1.3",
     "tsdown": "^0.23.3",
     "typescript": "^7"

@@ -46,7 +46,7 @@ registry.install(
   defineExtension({ name: "demo", tools, wraps: [approvalGuard(bash, { timeoutMs: 60_000 })] }),
 );
 
-const { openLocalSqlite } = await import("../src/storage/do.ts");
+const { openLocalSqlite } = await import("../src/storage/local.ts");
 const storage = await openLocalSqlite(dbPath);
 
 const session = await OmpSession.open(storage, {

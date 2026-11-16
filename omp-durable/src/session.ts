@@ -89,6 +89,8 @@ export type OmpSessionListener = (event: OmpSessionEvent) => void;
 export type OmpSessionOpenOptions = {
   /** pi-ai `Models` (or provider); the host's catalog and credentials. */
   readonly models: HarnessOptions["models"];
+  /** Wake hook: called after open and whenever `wake()` changes (alarm arming on the host). */
+  readonly onWake?: HarnessOptions["onWake"];
   /** Registry to use; defaults to a fresh one with the omp tools installed. */
   readonly registry?: Registry;
   /** Conversation environment (`SandboxExecutionEnv` in cloud, `NodeExecutionEnv` in dev). */
@@ -126,6 +128,7 @@ export class OmpSession {
         registry,
         ...(options.env === undefined ? {} : { env: options.env }),
         ...(options.settings === undefined ? {} : { settings: options.settings }),
+        ...(options.onWake === undefined ? {} : { onWake: options.onWake }),
         now: () => Date.now(),
       },
       context,

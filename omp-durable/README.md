@@ -41,6 +41,41 @@ const session = await OmpSession.open(storage, {
 await session.ask("hello");
 ```
 
+## Run it on Cloudflare (or Rivet)
+
+`worker/` is the whole cloud story — the real omp `agentLoop()` bundled
+for workerd via `worker/build.ts` (`bun run build:worker`), with
+Bun-only imports replaced at bundle time (see `worker/shims/README.md`).
+One Durable Object per session (`OmpSessionObject`), SQLite storage,
+alarms for parked work, Queues for approvals/subagents, cron for the
+maintenance sweep:
+
+```bash
+bun run build:worker
+wrangler deploy # needs ANTHROPIC_API_KEY + SANDBOX_TOKEN secrets
+```
+
+```bash
+curl -X POST $WORKER/sessions -d '{}'                       # → { sessionId }
+curl -X POST $WORKER/sessions/$ID/ask -d '{"prompt":"hi"}'  # real loop turn
+curl $WORKER/sessions/$ID/transcript
+curl -X POST $WORKER/decide -d '{"sessionId":"…","key":"…","approved":true}'
+```
+
+Only two external calls leave the isolate: model traffic (`fetch` to
+Anthropic in `worker/model-transport.ts`) and tool execution (`fetch` to
+your sandbox service in `worker/http-sandbox.ts`). Everything else —
+loop, transcript, tasks, docs — lives in the Object's SQLite.
+
+Prove it without deploying: `bun test test/worker.test.ts` runs the same
+bundle under miniflare (scripted model + in-memory sandbox) and asserts a
+real tool turn, subagents, and queue routing.
+
+Rivet (or any actor host): only `worker/entry.ts` and
+`worker/session-do.ts` touch Cloudflare APIs. Port `fetch`/`queue`/
+`scheduled`/`alarm` to the target actor SDK; the loop, tools, transports,
+and pi-durable record move over unchanged.
+
 No API keys needed for dev: tests and `bun run example` use pi-ai's `faux`
 provider. See [PROPOSAL.md](./PROPOSAL.md) for the design and
 `src/parity.ts` for the per-feature parity status.

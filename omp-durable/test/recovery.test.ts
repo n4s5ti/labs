@@ -8,7 +8,7 @@ import { createModels, fauxAssistantMessage, fauxProvider } from "@earendil-work
 import { LocalSandboxApi } from "../src/local.ts";
 import { sandboxEnvFor } from "../src/sandbox.ts";
 import { OmpSession } from "../src/session.ts";
-import { openLocalSqlite } from "../src/storage/do.ts";
+import { openLocalSqlite } from "../src/storage/local.ts";
 import { context } from "./helpers.ts";
 
 const dirs: string[] = [];

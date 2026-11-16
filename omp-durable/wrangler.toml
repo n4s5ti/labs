@@ -1,0 +1,40 @@
+name = "omp-durable"
+main = "worker/dist/worker.js"
+compatibility_date = "2025-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "SESSION_OBJECT"
+class_name = "OmpSessionObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["OmpSessionObject"]
+
+[[queues.producers]]
+binding = "APPROVALS"
+queue = "omp-approvals"
+
+[[queues.producers]]
+binding = "SUBAGENTS"
+queue = "omp-subagents"
+
+[[queues.consumers]]
+queue = "omp-approvals"
+max_batch_size = 10
+max_retries = 5
+
+[[queues.consumers]]
+queue = "omp-subagents"
+max_batch_size = 10
+max_retries = 3
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Required secrets (wrangler secret put):
+#   ANTHROPIC_API_KEY — model transport
+#   SANDBOX_TOKEN — sandbox service bearer token
+[vars]
+ANTHROPIC_MODEL = "claude-sonnet-4-5"
+SANDBOX_URL = "https://sandbox.internal/v1"

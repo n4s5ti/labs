@@ -71,8 +71,4 @@ export async function armAlarms(
   if (wake.at !== undefined) await storage.setAlarm(wake.at);
 }
 
-/** Local-dev counterpart: SQLite file storage for one session. */
-export async function openLocalSqlite(path: string): Promise<Awaited<ReturnType<typeof import("@earendil-works/pi-durable/storage/sqlite/node").openNodeSqliteStorage>>> {
-  const { openNodeSqliteStorage } = await import("@earendil-works/pi-durable/storage/sqlite/node");
-  return openNodeSqliteStorage(path);
-}
+/** Local-dev counterpart lives in `./local.ts` (node-only, never bundled for workers). */

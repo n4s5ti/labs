@@ -10,6 +10,11 @@ export { OmpSession, type OmpPromptOptions, type OmpSessionEvent, type OmpSessio
 export { projectTranscript, projectEntry, renderTranscript, type OmpTranscriptEntry, type OmpProjectedMessage } from "./entries.ts";
 export { sandboxEnvFor } from "./sandbox.ts";
 export {
+  spawnOmp,
+  type OmpRunDrivers,
+  type OmpSubagentResult,
+} from "./spawn-omp.ts";
+export {
   runOmpTurn,
   sandboxAgentTools,
   scriptedStreamFn,

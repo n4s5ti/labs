@@ -1,0 +1,7 @@
+{
+  "name": "omp-durable-worker-shims",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Build-time shims (not published). See worker/shims/README.md.",
+  "type": "module"
+}
