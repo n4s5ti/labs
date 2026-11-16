@@ -8,6 +8,12 @@ Cloudflare Durable Objects for cloud.
   `resume`/`waitForIdle`/`newSession`/`switchSession`/`fork`/`reset`/
   `compact`) over a pi-durable `Harness`. Crashes resume from the last commit
   (`OmpSession.attach()`).
+- **Real omp loop** — `askOmp()` runs genuine `agentLoop()` from
+  `@oh-my-pi/pi-agent-core` (a declared dependency) and commits its messages
+  to the pi transcript. Turn-taking, tool dispatch, and the event lifecycle
+  are omp's code; `sandboxAgentTools()` expresses the cloud-portable tools
+  as real omp `AgentTool`s. `ask()` remains the fully-durable pi-generation
+  engine.
 - **Tools** — cloud-portable `bash`/`read`/`write`/`edit`/`list`/`glob` that
   run exclusively through the conversation's `ExecutionEnv`. Reads are
   replay-safe; mutations never rerun blindly after a restart.

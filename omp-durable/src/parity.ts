@@ -18,6 +18,7 @@ export type ParityRow = {
 
 export const PARITY: readonly ParityRow[] = [
   { omp: "prompt / steer / abort / resume / waitForIdle", status: "durable", via: "OmpSession → Conversation.submit/abort/waitForIdle", notes: "steer = whenBusy:'steer'; follow-ups queue by default" },
+  { omp: "agent loop (turns, tool dispatch, AgentEvents)", status: "durable", via: "runOmpTurn(agentLoop) + OmpSession.askOmp() commit", notes: "real @oh-my-pi/pi-agent-core code; pi entries mirror the loop output" },
   { omp: "transcript (SessionEntry v3 JSONL)", status: "projected", via: "pi entries → projectTranscript()", notes: "pi entries are the record; projection covers message/usage/model-change/compaction/reset/custom" },
   { omp: "newSession / switchSession / fork / branch", status: "durable", via: "createConversation / conversation(id) / fork(at)", notes: "subagents use spawnChild (no handle switch)" },
   { omp: "reset / compaction (threshold/background/manual)", status: "durable", via: "Conversation.reset/compact + maybeCompact policy", notes: "summarizer model via pi compaction settings" },

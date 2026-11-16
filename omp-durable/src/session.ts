@@ -19,13 +19,24 @@
  *
  * Events are emitted from this class's own control flow (`input_placed`,
  * `turn_end`, `aborted`, `idled`) plus transcript diffs (`message`) computed
- * from entry fetches around each settled turn. There is deliberately no
- * `AgentSession` import: omp's session module is Bun+N-API coupled and
- * cannot load in a worker, which is the whole point of this adapter.
+ * from entry fetches around each settled turn.
+ *
+ * Two turn engines: `ask()` runs pi-durable's own generation task
+ * (fully-durable replay); `askOmp()` runs the real omp `agentLoop()` from
+ * `@oh-my-pi/pi-agent-core` and commits its messages. Both write the same
+ * pi transcript.
  */
 
 import type { Context } from "@earendil-works/chord/context";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
+import type {
+  AgentEvent,
+  AgentLoopConfig,
+  AgentMessage,
+  AgentTool,
+  StreamFn,
+} from "@oh-my-pi/pi-agent-core";
+import type { Message as PiMessage, UserMessage as PiUserMessage } from "@earendil-works/pi-ai";
 import {
   createRegistry,
   Harness,
@@ -33,6 +44,7 @@ import {
   type Conversation,
   type ConversationId,
   type EntryId,
+  type EntryRecord,
   type HarnessOptions,
   type HarnessSettings,
   type ModelRef,
@@ -214,6 +226,59 @@ export class OmpSession {
   /** Prompt and wait for the answer in one call. */
   async ask(text: string, options: OmpPromptOptions = {}): Promise<SettledSubmissionRecord> {
     return this.waitForTurn(await this.prompt(text, options));
+  }
+
+  /**
+   * Run a turn through the real omp loop (`agentLoop()`) and commit its
+   * messages to the pi transcript.
+   *
+   * This is the genuine-integration path: scheduling, tool dispatch, and
+   * the event lifecycle execute inside omp's code; pi-durable owns the
+   * durable record around it. The prompt is stored as a passive `pi.user`
+   * write first (no pi generation run), then `runOmpTurn()` executes, then
+   * each produced message commits as its pi entry kind. Use `ask()` for
+   * the fully-durable pi-generation engine instead.
+   */
+  async askOmp(
+    text: string,
+    request: {
+      readonly tools?: readonly AgentTool[];
+      readonly streamFn?: StreamFn;
+      readonly model?: AgentLoopConfig["model"];
+      readonly systemPrompt?: string[];
+      readonly signal?: AbortSignal;
+    } = {},
+  ): Promise<{ readonly messages: AgentMessage[]; readonly events: AgentEvent[] }> {
+    const { runOmpTurn, ompMessagesToPi, piMessagesToOmp } = await import("./omp-loop.ts");
+    const userMessage = { role: "user", content: text, timestamp: Date.now() } as PiUserMessage;
+    const admission = await this.conversation.submit(
+      { type: "write", entry: { kind: "pi.user", model: [userMessage] } },
+      this.context,
+    );
+    await admission.wait(this.context);
+    const history: PiMessage[] = [];
+    for (const entry of await this.rawEntries()) history.push(...(entry.model ?? []));
+    const result = await runOmpTurn({
+      prompt: text,
+      history: piMessagesToOmp(history),
+      ...(request.tools === undefined ? {} : { tools: request.tools }),
+      ...(request.streamFn === undefined ? {} : { streamFn: request.streamFn }),
+      ...(request.model === undefined ? {} : { model: request.model }),
+      ...(request.systemPrompt === undefined ? {} : { systemPrompt: request.systemPrompt }),
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+    });
+    const committed = await this.conversation.commit(async (tx) => {
+      const records: EntryRecord[] = [];
+      for (const message of ompMessagesToPi(result.messages)) {
+        const kind = message.role === "assistant" ? "pi.assistant" : message.role === "toolResult" ? "pi.tool-result" : "pi.user";
+        records.push(await tx.appendEntry(this.conversation.id, { kind, model: [message] }));
+      }
+      return records;
+    }, this.context);
+    for (const record of committed) {
+      for (const projected of projectTranscript([record])) this.emit({ type: "message", entry: projected });
+    }
+    return result;
   }
 
   /** Withdraw queued inputs, abort live work, wait until idle. */

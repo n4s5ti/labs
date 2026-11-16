@@ -9,6 +9,21 @@
 export { OmpSession, type OmpPromptOptions, type OmpSessionEvent, type OmpSessionListener, type OmpSessionOpenOptions } from "./session.ts";
 export { projectTranscript, projectEntry, renderTranscript, type OmpTranscriptEntry, type OmpProjectedMessage } from "./entries.ts";
 export { sandboxEnvFor } from "./sandbox.ts";
+export {
+  runOmpTurn,
+  sandboxAgentTools,
+  scriptedStreamFn,
+  scriptedModel,
+  ompMessagesToPi,
+  piMessagesToOmp,
+  type OmpTurnOptions,
+  type OmpTurnResult,
+  type OmpScriptStep,
+  type AgentEvent,
+  type AgentMessage,
+  type AgentTool,
+  type StreamFn,
+} from "./omp-loop.ts";
 export { SandboxExecutionEnv, type SandboxApi, type SandboxExecOptions, type SandboxExecResult, type SandboxOutputChunk } from "./sandbox.ts";
 export { LocalSandboxApi } from "./local.ts";
 export { OMP_ROLES, isOmpRole, roleAgentChange, withRoleFallback, type OmpRole, type RoleModelMap } from "./models.ts";
