@@ -11,6 +11,7 @@ tests and a runnable example.
 | [ilha-pixi](./ilha-pixi) (`ilha-pixi`) | PixiJS renderer bindings for ilha with pixi-react parity (2D + `@pixi/3d` scenes) | `cd ilha-pixi && bun install && bun run example` → `http://localhost:8138/` |
 | [ilha-asuka](./ilha-asuka) (`ilha-asuka`) | ilha renderer over Asuka's native-host protocol (`ops` batches + layout in Go, `bun:ffi` primary, child-process IPC fallback) | `cd ilha-asuka && bun install && bun run example` → `http://localhost:8139/` |
 | [omp-durable](./omp-durable) (`omp-durable`) | oh-my-pi harness features on pi-durable: full session parity, durable execution, Cloudflare DO ready | `cd omp-durable && bun install && bun run example` → `http://localhost:8150/` |
+| [ilha-ui-sdk](./ilha-ui-sdk) (`ilha-ui-sdk`) | vercel-labs/ui headless behaviors on ilha atoms (full `@ui-sdk/solid` port: 80+ components, hooks, and utils over `@ui-sdk/core`) | `cd ilha-ui-sdk && bun install && bun run example` → `http://localhost:8151/` |
 
 Each package also documents its own API in its README.
 
