@@ -32,6 +32,34 @@ function fail(code: FileErrorCode, message: string): Result<never, SandboxFailur
   return err({ code, message });
 }
 
+const POSIX = process.platform !== "win32";
+
+/** SIGKILL a detached child's whole process group (its shell and everything it started). */
+function killGroup(pid: number | undefined): void {
+  if (pid === undefined) return;
+  try {
+    process.kill(POSIX ? -pid : pid, "SIGKILL");
+  } catch {
+    // Already gone.
+  }
+}
+
+/**
+ * Runs a command in its own process group, guarded by this process's
+ * lifetime. Before exec'ing the command, the group leader starts a background
+ * watcher in the same group. While this host (`$1`) is alive it polls; once
+ * the command (the leader, `$$`) is gone it exits quietly. If the host dies,
+ * even by SIGKILL, the watcher kills the whole group within one poll. The guard
+ * exists before the command's first instruction, so the command never runs
+ * unguarded. Without it an interrupted tool call keeps running after its host
+ * is gone and finishes side effects nothing recorded.
+ *
+ * Liveness polling instead of an inherited pipe: Bun's extra stdio pipes can
+ * report EOF to the child while the parent still holds them.
+ */
+const GUARDED_EXEC =
+  'host=$1; shift; { while kill -0 "$host" 2>/dev/null; do kill -0 $$ 2>/dev/null || exit 0; sleep 0.2; done; kill -KILL 0; } </dev/null >/dev/null 2>&1 & exec "$@"';
+
 function nodeCode(error: unknown): FileErrorCode {
   const code = (error as { code?: string } | undefined)?.code;
   if (code === "OMP_ESCAPE") return "permission_denied";
@@ -195,13 +223,17 @@ export class LocalSandboxApi implements SandboxApi {
       return Promise.resolve(err({ code: "spawn_error" as const, message: (error as Error).message }));
     }
     return new Promise((resolvePromise) => {
-      const [file, args] =
-        typeof command === "string" ? ["/bin/sh", ["-c", command]] : [command[0], [...command.slice(1)]];
+      const argv = typeof command === "string" ? ["/bin/sh", "-c", command] : [...command];
+      const [file, args] = POSIX
+        ? ["/bin/sh", ["-c", GUARDED_EXEC, "omp-exec", String(process.pid), ...argv]]
+        : [argv[0], argv.slice(1)];
       let child;
       try {
+        // Own process group, so the whole tree can be killed together.
         child = spawn(file, args, {
           cwd: full,
           env: options?.inheritEnv === false ? { ...(options?.env ?? {}) } : { ...process.env, ...(options?.env ?? {}) },
+          detached: POSIX,
         });
       } catch (error) {
         resolvePromise(err({ code: "spawn_error" as const, message: (error as Error).message }));
@@ -220,14 +252,14 @@ export class LocalSandboxApi implements SandboxApi {
         options?.timeoutMs === undefined
           ? undefined
           : setTimeout(() => {
-              child.kill("SIGKILL");
+              killGroup(child.pid);
               finish(err({ code: "timeout" as const, message: `command timed out after ${options.timeoutMs}ms` }));
             }, options.timeoutMs);
       child.stdout.on("data", (chunk: Buffer) => {
         const text = chunk.toString("utf8");
         stdout += text;
         if (stdout.length > (options?.maxBytes ?? 1 << 20)) {
-          child.kill("SIGKILL");
+          killGroup(child.pid);
           finish(err({ code: "unknown" as const, message: "output exceeded maxBytes" }));
           return;
         }
